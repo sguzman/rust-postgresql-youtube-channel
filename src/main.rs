@@ -1,11 +1,17 @@
-extern crate rand;
+extern crate reqwest;
 
-mod lib;
+mod chan;
+mod http;
 
 fn main() {
-    let chans_priors = lib::channels::main();
+    let chans_priors = chan::main();
+    println!("{}", chans_priors.len());
 
-    for i in 0..(chans_priors.len()) {
-        println!("{}", chans_priors[i].id)
+    for s in chans_priors {
+        let serial = s.channel_serial;
+
+        let client = reqwest::Client::new();
+        let info = http::get(client, serial);
+        println!("{}, {}", info.0, info.1);
     }
 }
