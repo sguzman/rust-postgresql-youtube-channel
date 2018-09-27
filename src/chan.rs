@@ -6,6 +6,12 @@ pub mod channels {
     const PRIOR_LEN: usize = 26203;
     const CHAN_LEN: usize = 10000;
 
+    const SQL_USER: &str = "root";
+    const SQL_PASS: &str = "";
+    const SQL_HOST: &str = "locahost";
+    const SQL_PORT: u16 = 5432;
+    const SQL_DB: &str = "youtube";
+
     #[derive(Copy, Clone)]
     pub struct Channel {
         pub id: i64,
@@ -17,8 +23,8 @@ pub mod channels {
         id: 0
     };
 
-    fn connect(user: &str, pass: &str, host: &str, port: u16, db: &str) -> postgres::Connection {
-        let postgres_url: String = format!("postgres://{}:{}@{}:{}/{}", user, pass, host, port, db);
+    fn connect() -> postgres::Connection {
+        let postgres_url: String = format!("postgres://{}:{}@{}:{}/{}", SQL_USER, SQL_PASS, SQL_HOST, SQL_PORT, SQL_DB);
         let none = postgres::TlsMode::None;
 
         let conn = postgres::Connection::connect(postgres_url, none)
@@ -27,10 +33,10 @@ pub mod channels {
         return conn;
     }
 
-    fn channels(user: &str, pass: &str, host: &str, port: u16, db: &str) -> [Channel; CHAN_LEN] {
+    fn channels() -> [Channel; CHAN_LEN] {
         let query_str: String = format!("SELECT channel_id, id FROM youtube.channels.channels LIMIT {}", CHAN_LEN);
 
-        let conn = connect(user, pass, host, port, db);
+        let conn = connect();
         let query_results = conn.query(query_str.as_ref(), &[]).unwrap();
 
         let mut vec: [Channel; CHAN_LEN] = [CHAN_NIL; CHAN_LEN];
@@ -87,7 +93,7 @@ pub mod channels {
     }
 
     pub fn main() -> [Channel; PRIOR_LEN] {
-        let chans = channels("root", "", "localhost", 5432, "youtube");
+        let chans = channels();
         prior_adjust(chans)
     }
 }
