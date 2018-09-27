@@ -7,12 +7,12 @@ const CHAN_LEN: usize = 10000;
 
 #[derive(Copy, Clone)]
 pub struct Channel {
-    pub channel_serial: [char; CHAR_LEN],
-    pub id: i64
+    pub id: i64,
+    pub channel_serial: [u8; CHAR_LEN]
 }
 
 const CHAN_NIL: Channel = Channel {
-  channel_serial: ['\0'; CHAR_LEN],
+  channel_serial: [0; CHAR_LEN],
   id: 0
 };
 
@@ -36,13 +36,14 @@ pub fn channels(user: &str, pass: &str, host: &str, port: u16, db: &str) -> [Cha
     for i in 1..query_results.len() {
         let row = query_results.get(i);
         let serial: String = row.get(0);
-        serial.chars();
 
         let chan = Channel {
             channel_serial: {
-                let mut chars = ['\0'; CHAR_LEN];
-                for i in 0..(serial.len() - 1) {
-                    chars[i] = serial.as_bytes()[i] as char;
+                let bytes = serial.as_bytes();
+                let mut chars = [0; CHAR_LEN];
+
+                for i in 0..(CHAR_LEN - 1) {
+                    chars[i] = bytes[i];
                 }
 
                 chars
@@ -65,7 +66,10 @@ fn priority_weight(len: usize, idx: usize) -> usize {
     }
 }
 
+
+
 pub fn prior_adjust(chans: [Channel; CHAN_LEN]) -> [Channel; PRIOR_LEN] {
+    use rand::Rng;
     let mut priors = [CHAN_NIL; PRIOR_LEN];
 
     let mut idx = 0;
@@ -76,6 +80,9 @@ pub fn prior_adjust(chans: [Channel; CHAN_LEN]) -> [Channel; PRIOR_LEN] {
             idx += 1;
         }
     }
+
+    let mut rng = rand::thread_rng();
+    rng.shuffle(&mut priors);
 
     priors
 }
