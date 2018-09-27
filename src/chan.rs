@@ -8,7 +8,7 @@ pub mod channels {
 
     const SQL_USER: &str = "root";
     const SQL_PASS: &str = "";
-    const SQL_HOST: &str = "locahost";
+    const SQL_HOST: &str = "localhost";
     const SQL_PORT: u16 = 5432;
     const SQL_DB: &str = "youtube";
 
