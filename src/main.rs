@@ -3,8 +3,9 @@ extern crate rand;
 mod lib;
 
 fn main() {
-    let chans = lib::channels("root", "", "localhost", 5432, "youtube");
-    let chans_priors = lib::prior_adjust(chans);
+    let chans_priors = lib::channels::main();
 
-    println!("{}", chans_priors.len());
+    for i in 0..(chans_priors.len()) {
+        println!("{}", chans_priors[i].id)
+    }
 }
