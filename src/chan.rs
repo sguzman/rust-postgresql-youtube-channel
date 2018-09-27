@@ -1,8 +1,6 @@
 extern crate postgres;
 extern crate rand;
 
-const CHAR_LEN: usize = 24;
-const PRIOR_LEN: usize = 26203;
 const CHAN_LEN: usize = 10000;
 
 const SQL_USER: &str = "root";
@@ -11,16 +9,11 @@ const SQL_HOST: &str = "localhost";
 const SQL_PORT: u16 = 5432;
 const SQL_DB: &str = "youtube";
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Channel {
     pub id: i64,
-    pub channel_serial: [u8; CHAR_LEN]
+    pub channel_serial: String
 }
-
-const CHAN_NIL: Channel = Channel {
-    channel_serial: [0; CHAR_LEN],
-    id: 0
-};
 
 fn connect() -> postgres::Connection {
     let postgres_url: String = format!("postgres://{}:{}@{}:{}/{}", SQL_USER, SQL_PASS, SQL_HOST, SQL_PORT, SQL_DB);
@@ -32,31 +25,23 @@ fn connect() -> postgres::Connection {
     return conn;
 }
 
-fn channels() -> [Channel; CHAN_LEN] {
+fn channels() -> Vec<Channel> {
     let query_str: String = format!("SELECT channel_id, id FROM youtube.channels.channels LIMIT {}", CHAN_LEN);
 
     let conn = connect();
     let query_results = conn.query(query_str.as_ref(), &[]).unwrap();
 
-    let mut vec: [Channel; CHAN_LEN] = [CHAN_NIL; CHAN_LEN];
-    for i in 1..query_results.len() {
+    let mut vec = Vec::new();
+    for i in 0..query_results.len() {
         let row = query_results.get(i);
-        let serial: String = row.get(0);
+        let channel_serial: String = row.get(0);
+        let id = row.get(1);
 
         let chan = Channel {
-            channel_serial: {
-                let bytes = serial.as_bytes();
-                let mut chars = [0; CHAR_LEN];
-
-                for i in 0..(CHAR_LEN - 1) {
-                    chars[i] = bytes[i];
-                }
-
-                chars
-            },
-            id: row.get(1)
+            channel_serial,
+            id
         };
-        vec[i] = chan;
+        vec.push(chan);
     }
 
     conn.finish().unwrap();
@@ -72,16 +57,14 @@ fn priority_weight(len: usize, idx: usize) -> usize {
     }
 }
 
-fn prior_adjust(chans: [Channel; CHAN_LEN]) -> [Channel; PRIOR_LEN] {
+fn prior_adjust(chans: Vec<Channel>) -> Vec<Channel> {
     use rand::Rng;
-    let mut priors = [CHAN_NIL; PRIOR_LEN];
+    let mut priors = Vec::new();
 
-    let mut idx = 0;
     for i in 0..(chans.len() - 1) {
         let prior_i = priority_weight(chans.len(), i);
         for _ in 0..prior_i {
-            priors[idx] = chans[i];
-            idx += 1;
+            priors.push(chans[i].clone());
         }
     }
 
@@ -91,7 +74,6 @@ fn prior_adjust(chans: [Channel; CHAN_LEN]) -> [Channel; PRIOR_LEN] {
     priors
 }
 
-pub fn main() -> [Channel; PRIOR_LEN] {
-    let chans = channels();
-    prior_adjust(chans)
+pub fn main() -> Vec<Channel> {
+    prior_adjust(channels())
 }
