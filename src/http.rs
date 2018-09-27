@@ -55,12 +55,15 @@ fn clean_subs(raw_subs: &str) -> u64 {
 }
 
 
-pub fn get(client: reqwest::Client, serial: String) -> (String, u64) {
+pub fn get(serial: String) -> Option<(String, u64)> {
+    let client = reqwest::Client::new();
     let json = get_json(client, serial);
 
-    let title = json["header"]["c4TabbedHeaderRenderer"]["title"].as_str().unwrap();
-    let raw_subs = json["header"]["c4TabbedHeaderRenderer"]["subscriberCountText"]["simpleText"].as_str().unwrap();
-    let subs = clean_subs(raw_subs);
+    let title_option = json["header"]["c4TabbedHeaderRenderer"]["title"].as_str();
+    let raw_subs_option = json["header"]["c4TabbedHeaderRenderer"]["subscriberCountText"]["simpleText"].as_str();
 
-    return (title.to_string(), subs)
+    match (title_option, raw_subs_option) {
+        (Some(title), Some(raw_subs)) => Some((title.to_string(), clean_subs(raw_subs))),
+        _ => None
+    }
 }
