@@ -3,6 +3,8 @@ extern crate reqwest;
 mod chan;
 mod http;
 
+const CORES: usize = 4;
+
 pub fn insert_job(chans: Vec<chan::Channel>) {
     use rayon::prelude::*;
     use std::thread;
@@ -28,6 +30,8 @@ pub fn insert_job(chans: Vec<chan::Channel>) {
 }
 
 fn main() {
+    rayon::ThreadPoolBuilder::new().num_threads(CORES).build_global().unwrap();
+
     let chans_priors = chan::main();
     insert_job(chans_priors);
 }

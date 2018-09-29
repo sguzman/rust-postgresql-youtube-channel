@@ -26,7 +26,7 @@ fn connect() -> postgres::Connection {
 }
 
 fn channels() -> Vec<Channel> {
-    let query_str: String = format!("SELECT channel_id, id FROM youtube.channels.channels LIMIT {}", CHAN_LEN);
+    let query_str: String = format!("SELECT chan_serial, id FROM youtube.channels.chans ORDER BY subs DESC LIMIT {}", CHAN_LEN);
 
     let conn = connect();
     let query_results = conn.query(query_str.as_ref(), &[]).unwrap();
@@ -61,7 +61,7 @@ fn prior_adjust(chans: Vec<Channel>) -> Vec<Channel> {
     use rand::Rng;
     let mut priors = Vec::new();
 
-    for i in 0..(chans.len() - 1) {
+    for i in 0..chans.len() {
         let prior_i = priority_weight(chans.len(), i);
         for _ in 0..prior_i {
             priors.push(chans[i].clone());
