@@ -4,22 +4,36 @@ extern crate serde_json;
 
 const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36 ";
 
-fn get_doc(client: reqwest::Client, serial: String) -> scraper::Html {
+fn get_doc(client: reqwest::Client, serial: String) -> Option<scraper::Html> {
     let key = reqwest::header::USER_AGENT;
     let value = USER_AGENT;
 
-    let mut res = client
+    let res_result = client
         .get(format!("https://www.youtube.com/channel/{}", serial).as_str())
         .header(key, value)
-        .send().unwrap();
-    let body = res.text().unwrap();
+        .send();
 
-    let document = body.as_ref();
-    scraper::Html::parse_document(document)
+    match res_result {
+        Ok(mut res) => {
+            let body = res.text().unwrap();
+
+            let document = body.as_ref();
+            Some(scraper::Html::parse_document(document))
+        },
+        Err(e) => {
+            println!("{:?}", e);
+            None
+        }
+    }
 }
 
-fn get_json(client: reqwest::Client, serial: String) -> serde_json::Value {
-    let doc = get_doc(client, serial);
+fn get_json(client: reqwest::Client, serial: String) -> Option<serde_json::Value> {
+    let doc_option = get_doc(client, serial);
+    if doc_option == None {
+        return None
+    }
+
+    let doc = doc_option.unwrap();
 
     let selectors = "script";
     let selector = scraper::Selector::parse(selectors).unwrap();
@@ -38,11 +52,11 @@ fn get_json(client: reqwest::Client, serial: String) -> serde_json::Value {
             let end_delim = first_str.find(pat).unwrap();
 
             let s = &first_str[0..end_delim];
-            return serde_json::from_str(s).unwrap();
+            return Some(serde_json::from_str(s).unwrap());
         }
     }
 
-    serde_json::from_str(r#"{}"#).unwrap()
+    None
 }
 
 fn clean_subs(raw_subs: &str) -> u64 {
@@ -57,7 +71,12 @@ fn clean_subs(raw_subs: &str) -> u64 {
 
 pub fn get(serial: String) -> Option<(String, u64)> {
     let client = reqwest::Client::new();
-    let json = get_json(client, serial);
+    let json_option = get_json(client, serial);
+    if json_option == None {
+        return None
+    }
+
+    let json = json_option.unwrap();
 
     let title_option = json["header"]["c4TabbedHeaderRenderer"]["title"].as_str();
     let raw_subs_option = json["header"]["c4TabbedHeaderRenderer"]["subscriberCountText"]["simpleText"].as_str();

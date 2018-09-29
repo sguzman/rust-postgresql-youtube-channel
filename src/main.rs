@@ -1,32 +1,27 @@
 extern crate reqwest;
-extern crate tokio;
 
 mod chan;
 mod http;
 
 pub fn insert_job(chans: Vec<chan::Channel>) {
     use rayon::prelude::*;
-    use tokio::io;
-    use tokio::prelude::*;
-
-
     use std::thread;
     use std::sync::mpsc::sync_channel;
 
-    let (tx, rx) = sync_channel::<u64>(100);
+    let (tx, rx) = sync_channel::<(String, u64)>(100);
     thread::spawn(move||{
-        let metric = rx.recv().unwrap();
-        println!("Received something {}", metric);
+        loop {
+            let (title, subs) = rx.recv().unwrap();
+            println!("{} {}", title, subs);
+        }
     });
 
     chans
         .into_par_iter()
         .for_each(|c: chan::Channel| {
-            let res = http::get(c.channel_serial);
-            match res {
-                Some((title, subs)) => {
-                    println!("{} {} {:#?}", title, subs, tx.send(subs).unwrap());
-                },
+            let resp = http::get(c.channel_serial);
+            match resp {
+                Some(data) => tx.send(data).unwrap(),
                 None => {}
             }
         });
