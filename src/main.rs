@@ -8,6 +8,17 @@ extern crate influent;
 mod chan;
 mod http;
 
+use influent::create_client;
+use influent::client::{Client, Credentials};
+use influent::measurement::{Measurement, Value};
+use influent::client::Precision;
+
+const USER: &str = "admin";
+const PASS: &str = "admin";
+const HOST: &str = "localhost";
+const PORT: u16 = 8086;
+const DB: &str = "youtube";
+
 const CORES: usize = 4;
 
 fn priority_weight(len: u32, idx: u32) -> u32 {
@@ -41,9 +52,24 @@ pub fn insert_job() {
 
     let (tx, rx) = sync_channel::<(String, u64)>(100);
     thread::spawn(move||{
+        let credentials = Credentials {
+            username: USER,
+            password: PASS,
+            database: DB
+        };
+
+        let url = format!("http://{}:{}", HOST, PORT);
+        let hosts = vec![url.as_ref()];
+
+        let client = create_client(credentials, hosts);
         loop {
             let (title, subs) = rx.recv().unwrap();
             println!("{} {}", title, subs);
+            let mut measurement = Measurement::new("Channels");
+            measurement.add_tag("name", title);
+            measurement.add_field("subscriberCount", Value::Integer(subs as i64));
+
+            client.write_one(measurement, None);
         }
     });
 
