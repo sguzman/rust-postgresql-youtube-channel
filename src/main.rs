@@ -21,7 +21,7 @@ pub fn insert_job(chans: Vec<chan::Channel>) {
     chans
         .into_par_iter()
         .for_each(|c: chan::Channel| {
-            let resp = http::get(c.channel_serial);
+            let resp: Option<(String, u64)> = http::get(c.channel_serial);
             match resp {
                 Some(data) => tx.send(data).unwrap(),
                 None => {}
@@ -32,6 +32,6 @@ pub fn insert_job(chans: Vec<chan::Channel>) {
 fn main() {
     rayon::ThreadPoolBuilder::new().num_threads(CORES).build_global().unwrap();
 
-    let chans_priors = chan::main();
-    insert_job(chans_priors);
+    let chans: Vec<chan::Channel> = chan::main();
+    insert_job(chans);
 }
