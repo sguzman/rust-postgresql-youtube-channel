@@ -6,7 +6,7 @@ const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleW
 
 fn get_doc(client: reqwest::Client, serial: String) -> Option<scraper::Html> {
     let key = reqwest::header::USER_AGENT;
-    let value = USER_AGENT;
+    let value: &str = USER_AGENT;
 
     let res_result = client
         .get(format!("https://www.youtube.com/channel/{}", serial).as_str())
@@ -28,27 +28,27 @@ fn get_doc(client: reqwest::Client, serial: String) -> Option<scraper::Html> {
 }
 
 fn get_json(client: reqwest::Client, serial: String) -> Option<serde_json::Value> {
-    let doc_option = get_doc(client, serial);
+    let doc_option: Option<scraper::Html> = get_doc(client, serial);
     if doc_option == None {
         return None
     }
 
     let doc = doc_option.unwrap();
 
-    let selectors = "script";
+    let selectors: &str = "script";
     let selector = scraper::Selector::parse(selectors).unwrap();
 
     for script in doc.select(&selector) {
         let text = script.text().collect::<Vec<_>>();
 
-        let pat = "window[\"ytInitialData\"]";
+        let pat: &str = "window[\"ytInitialData\"]";
         if text.len() > 0 && text.first().unwrap().trim_left().starts_with(pat) {
 
-            let pat = "\n    window[\"ytInitialData\"] = ";
+            let pat: &str = "\n    window[\"ytInitialData\"] = ";
             let first_str = text[0]
                 .trim_left_matches(pat);
 
-            let pat = ";\n";
+            let pat: &str = ";\n";
             let end_delim = first_str.find(pat).unwrap();
 
             let s = &first_str[0..end_delim];
@@ -60,18 +60,17 @@ fn get_json(client: reqwest::Client, serial: String) -> Option<serde_json::Value
 }
 
 fn clean_subs(raw_subs: &str) -> u64 {
-    let pat = " subscribers";
-    let from = ",";
-    let to = "";
-    let string = raw_subs.trim_right_matches(pat).replace(from, to);
+    let pat: &str = " subscribers";
+    let from: &str = ",";
+    let to: &str = "";
+    let string: String = raw_subs.trim_right_matches(pat).replace(from, to);
 
     string.parse::<u64>().unwrap()
 }
 
-
 pub fn get(serial: String) -> Option<(String, u64)> {
     let client = reqwest::Client::new();
-    let json_option = get_json(client, serial);
+    let json_option: Option<serde_json::Value> = get_json(client, serial);
     if json_option == None {
         return None
     }
