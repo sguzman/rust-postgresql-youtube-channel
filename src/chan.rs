@@ -1,6 +1,3 @@
-extern crate postgres;
-extern crate rand;
-
 const CHAN_LEN: usize = 10000;
 
 const SQL_USER: &str = "root";
@@ -25,7 +22,7 @@ fn connect() -> postgres::Connection {
     return conn;
 }
 
-fn channels() -> Vec<Channel> {
+pub fn channels() -> Vec<Channel> {
     let query_str: String = format!("SELECT chan_serial, id FROM youtube.channels.chans ORDER BY subs DESC LIMIT {}", CHAN_LEN);
 
     let conn = connect();
@@ -46,34 +43,4 @@ fn channels() -> Vec<Channel> {
 
     conn.finish().unwrap();
     vec
-}
-
-fn priority_weight(len: usize, idx: usize) -> usize {
-    let weight = ((len / (1 + idx)) * (len / (1 + idx))) / len;
-    return if weight == 0 {
-        1
-    } else {
-        weight
-    }
-}
-
-fn prior_adjust(chans: Vec<Channel>) -> Vec<Channel> {
-    use rand::Rng;
-    let mut priors = Vec::new();
-
-    for i in 0..chans.len() {
-        let prior_i = priority_weight(chans.len(), i);
-        for _ in 0..prior_i {
-            priors.push(chans[i].clone());
-        }
-    }
-
-    let mut rng = rand::thread_rng();
-    rng.shuffle(&mut priors);
-
-    priors
-}
-
-pub fn main() -> Vec<Channel> {
-    prior_adjust(channels())
 }
