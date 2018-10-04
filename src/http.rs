@@ -1,7 +1,3 @@
-extern crate reqwest;
-extern crate scraper;
-extern crate serde_json;
-
 const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36 ";
 
 fn get_doc(client: reqwest::Client, serial: String) -> Option<scraper::Html> {

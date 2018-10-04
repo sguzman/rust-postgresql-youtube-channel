@@ -1,5 +1,3 @@
-extern crate influent;
-
 const USER: &str = "admin";
 const PASS: &str = "admin";
 const HOST: &str = "localhost";
