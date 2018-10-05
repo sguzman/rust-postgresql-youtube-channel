@@ -8,10 +8,11 @@ extern crate influent;
 mod chan;
 mod http;
 
-use influent::create_client;
-use influent::client::{Client, Credentials};
-use influent::measurement::{Measurement, Value};
+use rand::distributions::Distribution;
+use influent::client::Client;
 use influent::client::Precision;
+use std::thread;
+use std::sync::mpsc::sync_channel;
 
 const USER: &str = "admin";
 const PASS: &str = "admin";
@@ -31,14 +32,21 @@ fn priority_weight(len: u32, idx: u32) -> u32 {
     }
 }
 
-pub fn insert_job() {
-    use std::thread;
-    use std::sync::mpsc::sync_channel;
-    use rand::distributions::{Weighted, WeightedChoice, Distribution};
+fn loop_body(distro: &rand::distributions::WeightedChoice<chan::Channel>, tx: std::sync::mpsc::SyncSender<(String, u64)>) {
+    let mut rng = rand::thread_rng();
+    let c = distro.sample(&mut rng);
 
+    let resp: Option<(String, u64)> = http::get(c.channel_serial);
+    match resp {
+        Some(data) => tx.send(data).unwrap(),
+        None => {}
+    }
+}
+
+pub fn insert_job() {
     let chans = chan::channels();
 
-    let mut items: Vec<Weighted<chan::Channel>> = Vec::new();
+    let mut items: Vec<rand::distributions::Weighted<chan::Channel>> = Vec::new();
     let len = chans.len();
 
     for i in 0..len {
@@ -52,7 +60,7 @@ pub fn insert_job() {
 
     let (tx, rx) = sync_channel::<(String, u64)>(100);
     thread::spawn(move||{
-        let credentials = Credentials {
+        let credentials = influent::client::Credentials {
             username: USER,
             password: PASS,
             database: DB
@@ -61,27 +69,20 @@ pub fn insert_job() {
         let url = format!("http://{}:{}", HOST, PORT);
         let hosts = vec![url.as_ref()];
 
-        let client = create_client(credentials, hosts);
+        let client = influent::create_client(credentials, hosts);
         loop {
             let (title, subs) = rx.recv().unwrap();
             println!("{} {}", title, subs);
-            let mut measurement = Measurement::new("Channels");
+            let mut measurement = influent::measurement::Measurement::new("Channels");
             measurement.add_tag("name", title);
-            measurement.add_field("subscriberCount", Value::Integer(subs as i64));
+            measurement.add_field("subscriberCount", influent::measurement::Value::Integer(subs as i64));
 
             client.write_one(measurement, None);
         }
     });
 
     loop {
-        let mut rng = rand::thread_rng();
-        let c = distro.sample(&mut rng);
-
-        let resp: Option<(String, u64)> = http::get(c.channel_serial);
-        match resp {
-            Some(data) => tx.send(data).unwrap(),
-            None => {}
-        }
+        loop_body(&distro, tx.clone());
     }
 }
 
