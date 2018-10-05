@@ -13,6 +13,7 @@ use influent::client::Client;
 use influent::client::Precision;
 use std::thread;
 use std::sync::mpsc::sync_channel;
+use rayon::prelude::*;
 
 const USER: &str = "admin";
 const PASS: &str = "admin";
@@ -82,10 +83,16 @@ pub fn insert_job() {
     });
 
     loop {
-        loop_body(&distro, tx.clone());
+        (0..(CORES * 10000))
+            .into_par_iter()
+            .for_each(|_| {
+                loop_body(&distro, tx.clone())
+            });
     }
 }
 
 fn main() {
+    rayon::ThreadPoolBuilder::new().num_threads(CORES).build_global().unwrap();
+
     insert_job();
 }
